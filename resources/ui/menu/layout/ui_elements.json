@@ -1,0 +1,28 @@
+{
+  "elements": [
+    {
+      "type": "Image",
+      "name": "onfsLogoImage",
+      "resource": "onfsLogo",
+      "scale": 0.1,
+      "layer": 0,
+      "position": {
+        "x": "RIGHT - 75",
+        "y": "5"
+      },
+      "action": "ONFS_LOGO_CLICK"
+    },
+    {
+      "type": "TextField",
+      "name": "onfsVersionText",
+      "text": "OpenNFS v{VERSION} Pre Alpha",
+      "textColor": [0.6, 0.6, 0.6, 1.0],
+      "scale": 0.2,
+      "layer": 0,
+      "position": {
+        "x": "RIGHT - 270",
+        "y": "35"
+      }
+    }
+  ]
+}
