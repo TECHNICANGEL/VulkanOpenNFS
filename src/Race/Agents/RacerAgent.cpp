@@ -1,18 +1,45 @@
 #include "RacerAgent.h"
 
+#include <fstream>
+
+#include "../../Config.h"
 #include "../../Physics/Car.h"
 #include "lib/glm/glm/gtx/vector_angle.hpp"
 
 namespace OpenNFS {
-    // TODO: Read this from file
-    char const *RACER_NAMES[23] = {
-        "DumbPanda",       "Spark198rus", "Keiiko",    "N/A",       "Patas De Pavo", "Dopamine Flint", "Oh Hansssss", "scaryred24",
-        "MaximilianVeers", "Keith",       "AJ_Lethal", "Sirius-R",  "Ewil",          "Zipper",         "heyitsleo",   "MADMAN_nfs",
-        "Wild One",        "Gotcha",      "Mulligan",  "Lead Foot", "Ace",           "Dead Beat",      "Ram Rod"};
+    static std::vector<std::string> LoadRacerNames() {
+        std::vector<std::string> names;
+        std::string const path = RESOURCE_PATH + "misc/racer_names.txt";
+        std::ifstream file(path);
+
+        if (file.is_open()) {
+            std::string line;
+            while (std::getline(file, line)) {
+                if (!line.empty()) {
+                    names.emplace_back(line);
+                }
+            }
+            file.close();
+        } else {
+            LOG(WARNING) << "Could not open racer names file: " << path;
+        }
+
+        if (names.empty()) {
+            names.emplace_back("Racer");
+        }
+
+        return names;
+    }
 
     RacerAgent::RacerAgent(uint16_t const racerID, std::shared_ptr<Car> const &car, Track const &raceTrack)
         : CarAgent(AgentType::RACING, car, raceTrack), m_racerID(racerID) {
-        name = RACER_NAMES[racerID];
+        static std::vector<std::string> const RACER_NAMES = LoadRacerNames();
+
+        if (racerID < RACER_NAMES.size()) {
+            name = RACER_NAMES[racerID];
+        } else {
+            name = "Racer " + std::to_string(racerID);
+        }
         this->vehicle = std::make_shared<Car>(car->assetData);
 
         // TODO: DEBUG! Set a low max speed.
