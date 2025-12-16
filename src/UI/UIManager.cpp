@@ -1,6 +1,7 @@
 #include "UIManager.h"
 
 #include <ranges>
+#include <json/json.hpp>
 
 #include "UIButton.h"
 #include "UIImage.h"
@@ -104,10 +105,25 @@ namespace OpenNFS {
                 m_uiElements.emplace_back(std::make_unique<UITextField>(text, color, scale, layer, position));
             }
         }
+        RegisterOnClick("ONFS_LOGO_CLICK", []() { LOG(INFO) << "Clicked onfsLogo"; });
+
+        // TODO: Load these from JSON too
+        auto testButton = std::make_unique<UIButton>(m_menuResourceMap["onfsLogo"], "TEST", glm::vec4(0.5, 0.5, 0, 1), 0.1f, 2,
+                                                     glm::vec2(Config::get().resX / 2, Config::get().resY / 2));
+        auto onfsLogoImage = std::make_unique<UIImage>(m_menuResourceMap["onfsLogo"], 0.1f, 0, glm::vec2(Config::get().resX - 75, 5));
+        auto onfsVersionText = std::make_unique<UITextField>("OpenNFS v" + ONFS_VERSION + " Pre Alpha", glm::vec4(0.6, 0.6, 0.6, 1.0), 0.2f,
+                                                             0, glm::vec2(Config::get().resX - 270, 35));
+
+        onfsLogoImage->SetOnClick(GetOnClick("ONFS_LOGO_CLICK"));
+        // m_uiElements.push_back(std::move(testButton));
+        m_uiElements.push_back(std::move(onfsLogoImage));
+        m_uiElements.push_back(std::move(onfsVersionText));
+
+        LoadUI("../resources/ui/menu/layout/mainMenu.json");
     }
     UIManager::~UIManager() {
-        for (auto &resource : m_menuResourceMap | std::views::values) {
-            glDeleteTextures(1, &resource.textureID);
+        for (auto &resourcePair : m_menuResourceMap) {
+            glDeleteTextures(1, &resourcePair.second.textureID);
         }
     }
 
@@ -134,5 +150,92 @@ namespace OpenNFS {
             }
         }
         m_uiRenderer.EndRenderPass();
+    }
+
+    void UIManager::RegisterOnClick(std::string name, OnClickCallback callback) {
+        m_onClickCallbacks[name] = callback;
+    }
+
+    UIManager::OnClickCallback UIManager::GetOnClick(std::string name) {
+        if (m_onClickCallbacks.count(name)) {
+            return m_onClickCallbacks[name];
+        }
+        return []() {};
+    }
+
+    void UIManager::LoadUI(std::string const &layoutFile) {
+        using json = nlohmann::json;
+
+        std::ifstream jsonFile(layoutFile);
+        if (!jsonFile.is_open()) {
+            LOG(WARNING) << "Couldn't open UI layout file " << layoutFile;
+            return;
+        }
+
+        json layoutJson;
+        jsonFile >> layoutJson;
+
+        auto parseElement = [&](json const &el) {
+            // Determine type. Simple heuristic for now based on fields.
+            bool isButton = el.contains("text") && el.contains("idleAsset");
+            // bool isImage = !el.contains("text") && el.contains("resource"); // Example
+            // bool isText = el.contains("text") && !el.contains("idleAsset"); // Example
+
+            // Parse common properties
+            float x = 0;
+            float y = 0;
+            if (el.contains("position")) {
+                x = el["position"]["x"];
+                y = el["position"]["y"];
+            }
+            float scale = el.value("scale", 1.0f);
+            uint32_t layer = el.value("layer", 0u);
+
+            if (isButton) {
+                std::string text = el["text"];
+                std::string textColorStr = el.value("textColour", "#FFFFFF");
+                // TODO: Parse hex color to vec4
+                glm::vec4 textColour(1.0f); // Default white
+
+                std::string idleAsset = el["idleAsset"];
+                // Look up resource
+                // Note: The resource map keys in LoadResources come from "name" field in resources.json
+                // We assume idleAsset matches one of those names.
+                // But m_menuResourceMap uses names from resources.json.
+                // We need to match PILL_BUTTON to a resource.
+
+                // Assuming PILL_BUTTON is a key in m_menuResourceMap if it was loaded.
+                // If not, we fallback or skip.
+                if (m_menuResourceMap.count(idleAsset)) {
+                     auto button = std::make_unique<UIButton>(
+                        m_menuResourceMap.at(idleAsset),
+                        text,
+                        textColour,
+                        scale,
+                        layer,
+                        glm::vec2(x, y)
+                    );
+
+                    if (el.contains("action")) {
+                        std::string action = el["action"];
+                        button->SetOnClick(GetOnClick(action));
+                    }
+
+                    m_uiElements.push_back(std::move(button));
+                } else {
+                    LOG(WARNING) << "Resource " << idleAsset << " not found for button";
+                }
+            }
+        };
+
+        if (layoutJson.is_array()) {
+            for (auto &el : layoutJson) {
+                parseElement(el);
+            }
+        } else if (layoutJson.is_object()) {
+            parseElement(layoutJson);
+        }
+
+        jsonFile.close();
     }
 } // namespace OpenNFS
