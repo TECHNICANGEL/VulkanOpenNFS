@@ -19,6 +19,9 @@ namespace OpenNFS {
         std::vector<std::unique_ptr<UIElement>> m_uiElements;
 
       private:
+        void LoadUIElements(std::string const &layoutFile);
+        float ParseCoordinate(const std::string &coord, float maxDimension);
+
         std::map<std::string, UIResource> m_menuResourceMap;
         UIRenderer m_uiRenderer;
     };
