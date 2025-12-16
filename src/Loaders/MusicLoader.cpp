@@ -360,18 +360,14 @@ void MusicLoader::ParseMAP(const std::string &map_path, const std::string &mus_p
     // Get starting position of first section
     uint8_t section_Idx = mapHeader->bFirstSection;
 
-    // TODO: Linear playthrough until I work out the looping malarkey
-    for (auto lol = 0; lol < mapHeader->bNumSections; ++lol) {
-        if (!ReadSCHl(mus_file, startingPositions[lol], pcm_file)) { //
-            std::cout << "Error reading SCHl block, POS: " << (int) lol << " Offset: " << startingPositions[lol] << std::endl;
-            break;
-        }
-    }
-
     // Out of spec: TrackModel number of times played section, use to set next section
     auto playedSections = std::map<uint8_t, int8_t>();
+    uint32_t totalSectionsPlayed = 0;
+    // Cap at a reasonable number of sections to prevent filling the disk with infinite PCM data
+    // In a real playback engine, this would be infinite.
+    const uint32_t MAX_SECTIONS_PLAYED = 1000;
 
-    while (sectionDefTable[section_Idx].bNumRecords > 0 && section_Idx < mapHeader->bNumSections) {
+    while (sectionDefTable[section_Idx].bNumRecords > 0 && section_Idx < mapHeader->bNumSections && totalSectionsPlayed < MAX_SECTIONS_PLAYED) {
         // Starting positions are raw offsets into MUS file
         // Read the SCH1 header and further blocks in MUS to play the section
         if (!ReadSCHl(mus_file, startingPositions[section_Idx], pcm_file)) { //
@@ -380,14 +376,21 @@ void MusicLoader::ParseMAP(const std::string &map_path, const std::string &mus_p
         }
 
         // Check if we've already played this section before. If we have, drop record number, else set to highest record index
-        playedSections[section_Idx] = playedSections.count(section_Idx) ? playedSections[section_Idx] - 1 : sectionDefTable[section_Idx].bNumRecords - 1;
-
-        // If played all next records, quit playback? TODO: Implies that TrackModel data must correlate to MAP derived loops
-        if (playedSections[section_Idx] < 0) {
-            break;
+        // Logic: Intro variations are played first (higher indices), then the last one (index 0) is looped.
+        if (playedSections.count(section_Idx)) {
+            if (playedSections[section_Idx] > 0) {
+                playedSections[section_Idx]--;
+            }
+        } else {
+            playedSections[section_Idx] = sectionDefTable[section_Idx].bNumRecords - 1;
         }
 
         section_Idx = sectionDefTable[section_Idx].msdRecords[playedSections[section_Idx]].bNextSection;
+        totalSectionsPlayed++;
+    }
+
+    if (totalSectionsPlayed >= MAX_SECTIONS_PLAYED) {
+        std::cout << "Playback limit reached (" << MAX_SECTIONS_PLAYED << " sections). Stopping infinite loop." << std::endl;
     }
 
     free(startingPositions);
