@@ -81,10 +81,18 @@ class OpenNFSEngine {
     }
 };
 
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+void android_main(struct android_app* app) {
+    // Init the logger first, as used everywhere in ONFS
+    auto const logger {std::make_shared<Logger>()};
+    // Config::get().InitFromCommandLine(argc, argv); // No CLI on Android
+#else
 int main(int argc, char **argv) {
     // Init the logger first, as used everywhere in ONFS
     auto const logger {std::make_shared<Logger>()};
     Config::get().InitFromCommandLine(argc, argv);
+#endif
 
     // Pass through our g3log streams as callbacks to LibOpenNFS. This looks strange, but we define a lambda that
     // returns a std::function (the callback itself) to avoid duplicating broadly identical declarations for each log
@@ -104,8 +112,16 @@ int main(int argc, char **argv) {
         OpenNFSEngine game(logger);
     } catch (std::runtime_error const &e) {
         LOG(WARNING) << e.what();
+#ifdef __ANDROID__
+        return;
+#else
         return EXIT_FAILURE;
+#endif
     }
 
+#ifdef __ANDROID__
+    // return; // void
+#else
     return EXIT_SUCCESS;
+#endif
 }

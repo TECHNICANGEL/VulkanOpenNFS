@@ -42,7 +42,6 @@ add_definitions(-DIMGUI_USER_CONFIG="${PROJECT_SOURCE_DIR}/src/Renderer/imgui_co
 set(SOURCE_FILES
         ${IMGUI_SOURCES}
         include/bmpread/bmpread.c
-        lib/glew-cmake/src/glew.c
         resources/asset/icon.rc
         src/Camera/BaseCamera.cpp
         src/Camera/BaseCamera.cpp
@@ -109,8 +108,6 @@ set(SOURCE_FILES
         src/UI/UIManager.cpp
         src/UI/UIResource.cpp)
 
-add_executable(OpenNFS ${SOURCE_FILES})
-
 #[[IMGUI]]
 include_directories(include/imgui)
 
@@ -151,8 +148,11 @@ include_directories(lib/bullet3/src)
 list(APPEND ONFS_LIBRARIES BulletDynamics BulletCollision LinearMath Bullet3Common)
 
 #[[GLEW Configuration]]
-add_subdirectory(lib/glew-cmake)
-list(APPEND ONFS_LIBRARIES libglew_static)
+if (NOT ANDROID)
+    add_subdirectory(lib/glew-cmake)
+    list(APPEND ONFS_LIBRARIES libglew_static)
+    list(APPEND SOURCE_FILES lib/glew-cmake/src/glew.c)
+endif ()
 
 #[[GLFW Configuration]]
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -163,9 +163,13 @@ add_subdirectory(lib/glfw)
 list(APPEND ONFS_LIBRARIES glfw)
 
 #[[OpenGL Configuration]]
-find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIRS})
-list(APPEND ONFS_LIBRARIES ${OPENGL_LIBRARIES})
+if (NOT ANDROID)
+    find_package(OpenGL REQUIRED)
+    include_directories(${OPENGL_INCLUDE_DIRS})
+    list(APPEND ONFS_LIBRARIES ${OPENGL_LIBRARIES})
+else ()
+    list(APPEND ONFS_LIBRARIES android EGL GLESv3 log)
+endif ()
 
 #[[Vulkan Configuration]]
 if (${USE_VULKAN})
@@ -178,6 +182,15 @@ if (${USE_VULKAN})
     target_sources(OpenNFS PUBLIC ${VULKAN_SOURCE_FILES})
     add_definitions(-DVULKAN_BUILD)
 endif ()
+
+if (ANDROID)
+    add_library(android_native_app_glue STATIC ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+    add_library(OpenNFS SHARED ${SOURCE_FILES})
+    target_include_directories(OpenNFS PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
+    target_link_libraries(OpenNFS ${ONFS_LIBRARIES} android_native_app_glue)
+else()
+    add_executable(OpenNFS ${SOURCE_FILES})
+endif()
 
 #[[Google Test Framework Configuration]]
 set(gtest_force_shared_crt ON CACHE BOOL "Prevent overriding the parent project's compiler/linker setting")
@@ -197,4 +210,6 @@ foreach (_test_file ${TEST_SRC_FILES})
 endforeach ()
 
 #[[Link Up Ting]]
-target_link_libraries(OpenNFS ${ONFS_LIBRARIES})
+if (NOT ANDROID)
+    target_link_libraries(OpenNFS ${ONFS_LIBRARIES})
+endif()

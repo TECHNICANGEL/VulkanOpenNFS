@@ -27,14 +27,20 @@ jobs:
           cd artifacts
           for dir in OpenNFS-*; do
             if [ -d "$dir" ]; then
-              zip -r "../release_assets/$dir.zip" "$dir"
+              if [[ "$dir" == "OpenNFS-Android" ]]; then
+                 cp "$dir/app-debug.apk" "../release_assets/OpenNFS-Android.apk"
+              else
+                 zip -r "../release_assets/$dir.zip" "$dir"
+              fi
             fi
           done
 
       - name: Nightly Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release_assets/*.zip
+          files: |
+            release_assets/*.zip
+            release_assets/*.apk
           tag_name: nightly
           name: OpenNFS Nightly
           draft: false
