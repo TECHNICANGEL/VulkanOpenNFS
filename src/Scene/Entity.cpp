@@ -39,15 +39,18 @@ namespace OpenNFS {
                 }
                 m_collisionShape = std::make_unique<btConvexTriangleMeshShape>(mesh.get(), true);
             } else {
-                // TODO: Use passable flags (flags&0x80) of VROAD to work out whether collidable
-                for (size_t vertIdx = 0; vertIdx < m_vertices.size() - 2; vertIdx += 3) {
-                    glm::vec3 triangle0{m_vertices[vertIdx]};
-                    glm::vec3 triangle1{m_vertices[vertIdx + 1]};
-                    glm::vec3 triangle2{m_vertices[vertIdx + 2]};
-                    m_collisionMesh.addTriangle(Utils::glmToBullet(triangle0), Utils::glmToBullet(triangle1), Utils::glmToBullet(triangle2),
-                                                false);
+                if (flags & 0x80) {
+                    collidable = false;
+                } else {
+                    for (size_t vertIdx = 0; vertIdx < m_vertices.size() - 2; vertIdx += 3) {
+                        glm::vec3 triangle0{m_vertices[vertIdx]};
+                        glm::vec3 triangle1{m_vertices[vertIdx + 1]};
+                        glm::vec3 triangle2{m_vertices[vertIdx + 2]};
+                        m_collisionMesh.addTriangle(Utils::glmToBullet(triangle0), Utils::glmToBullet(triangle1), Utils::glmToBullet(triangle2),
+                                                    false);
+                    }
+                    m_collisionShape = std::make_unique<btBvhTriangleMeshShape>(&m_collisionMesh, true, true);
                 }
-                m_collisionShape = std::make_unique<btBvhTriangleMeshShape>(&m_collisionMesh, true, true);
             }
         } break;
         default:
@@ -63,10 +66,12 @@ namespace OpenNFS {
         }
 
         m_motionState = std::make_unique<btDefaultMotionState>(Utils::MakeTransform(initialPosition, orientation));
-        rigidBody = std::make_unique<btRigidBody>(
-            btRigidBody::btRigidBodyConstructionInfo(entityMass, m_motionState.get(), m_collisionShape.get(), localInertia));
-        rigidBody->setFriction(1.f);
-        rigidBody->setUserPointer(this);
+        if (m_collisionShape) {
+            rigidBody = std::make_unique<btRigidBody>(
+                btRigidBody::btRigidBodyConstructionInfo(entityMass, m_motionState.get(), m_collisionShape.get(), localInertia));
+            rigidBody->setFriction(1.f);
+            rigidBody->setUserPointer(this);
+        }
     }
 
     void Entity::_GenBoundingBox() {
