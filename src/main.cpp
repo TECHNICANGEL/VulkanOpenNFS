@@ -86,7 +86,17 @@ class OpenNFSEngine {
 void android_main(struct android_app* app) {
     // Init the logger first, as used everywhere in ONFS
     auto const logger {std::make_shared<Logger>()};
-    // Config::get().InitFromCommandLine(argc, argv); // No CLI on Android
+
+    // Poll for events until the window is ready
+    int events;
+    struct android_poll_source* source;
+    while (app->destroyRequested == 0) {
+        if (ALooper_pollAll(0, nullptr, &events, (void**)&source) >= 0) {
+            if (source != nullptr) source->process(app, source);
+        }
+        // Once window is initialized, we can break or start the engine
+        if (app->window != nullptr) break;
+    }
 #else
 int main(int argc, char **argv) {
     // Init the logger first, as used everywhere in ONFS

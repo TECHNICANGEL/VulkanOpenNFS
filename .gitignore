@@ -7,3 +7,7 @@ build/
 bin/
 CMakeCache.txt
 CMakeFiles/
+
+# Gradle
+.gradle/
+**/build/
