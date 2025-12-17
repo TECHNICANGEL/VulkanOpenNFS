@@ -41,10 +41,16 @@ struct ASFBlockHeader {
 
 struct ASFChunkHeader {
     uint32_t dwOutSize;
-    uint16_t lCurSampleLeft;
-    uint16_t lPrevSampleLeft;
-    uint16_t lCurSampleRight;
-    uint16_t lPrevSampleRight;
+    int16_t lCurSampleLeft;
+    int16_t lPrevSampleLeft;
+    int16_t lCurSampleRight;
+    int16_t lPrevSampleRight;
+};
+
+struct ASFChunkHeaderMono {
+    uint32_t dwOutSize;
+    int16_t lCurSample;
+    int16_t lPrevSample;
 };
 
 class MusicLoader {
@@ -60,7 +66,7 @@ private:
 
     bool ReadSCHl(FILE *mus_file, uint32_t sch1Offset, FILE *pcm_file);
 
-    void DecompressEAADPCM(ASFChunkHeader *asfChunkHeader, long nSamples, FILE *mus_file, FILE *pcm_file);
+    void DecompressEAADPCM(ASFChunkHeader *asfChunkHeader, long nSamples, FILE *mus_file, FILE *pcm_file, uint32_t channels);
 
     void ParsePTHeader(FILE *file,
                        uint32_t *dwSampleRate,

@@ -162,12 +162,11 @@ void MusicLoader::ParsePTHeader(FILE *file,
     }
 }
 
-void MusicLoader::DecompressEAADPCM(ASFChunkHeader *asfChunkHeader, long nSamples, FILE *mus_file, FILE *pcm_file) {
+void MusicLoader::DecompressEAADPCM(ASFChunkHeader *asfChunkHeader, long nSamples, FILE *mus_file, FILE *pcm_file, uint32_t channels) {
     uint32_t l = 0, r = 0;
-    auto outBufL = (uint16_t *) calloc(nSamples, sizeof(uint16_t));
-    auto outBufR = (uint16_t *) calloc(nSamples, sizeof(uint16_t));
+    auto outBufL = (uint16_t *) calloc(asfChunkHeader->dwOutSize, sizeof(uint16_t));
+    auto outBufR = (uint16_t *) calloc(asfChunkHeader->dwOutSize, sizeof(uint16_t));
 
-    // TODO: Different stuff for MONO/Stereo
     int32_t lCurSampleLeft   = asfChunkHeader->lCurSampleLeft;
     int32_t lCurSampleRight  = asfChunkHeader->lCurSampleRight;
     int32_t lPrevSampleLeft  = asfChunkHeader->lPrevSampleLeft;
@@ -176,75 +175,138 @@ void MusicLoader::DecompressEAADPCM(ASFChunkHeader *asfChunkHeader, long nSample
     uint8_t bInput;
     int32_t c1left, c2left, c1right, c2right, left, right;
     uint8_t dleft, dright;
-    uint32_t dwSubOutSize = 0x1c;
 
-    // process integral number of (dwSubOutSize) samples
-    for (uint32_t bCount = 0; bCount < (asfChunkHeader->dwOutSize / dwSubOutSize); bCount++) {
-        fread(&bInput, sizeof(int8_t), 1, mus_file);
-        c1left  = EATable[HINIBBLE(bInput)]; // predictor coeffs for left channel
-        c2left  = EATable[HINIBBLE(bInput) + 4];
-        c1right = EATable[LONIBBLE(bInput)]; // predictor coeffs for right channel
-        c2right = EATable[LONIBBLE(bInput) + 4];
-        fread(&bInput, sizeof(int8_t), 1, mus_file);
-        dleft  = HINIBBLE(bInput) + 8; // shift value for left channel
-        dright = LONIBBLE(bInput) + 8; // shift value for right channel
-        for (uint32_t sCount = 0; sCount < dwSubOutSize; sCount++) {
+    if (channels == 2) {
+        uint32_t dwSubOutSize = 0x1c;
+
+        // process integral number of (dwSubOutSize) samples
+        for (uint32_t bCount = 0; bCount < (asfChunkHeader->dwOutSize / dwSubOutSize); bCount++) {
             fread(&bInput, sizeof(int8_t), 1, mus_file);
-            left             = HINIBBLE(bInput); // HIGHER nibble for left channel
-            right            = LONIBBLE(bInput); // LOWER nibble for right channel
-            left             = (left << 0x1c) >> dleft;
-            right            = (right << 0x1c) >> dright;
-            left             = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
-            right            = (right + lCurSampleRight * c1right + lPrevSampleRight * c2right + 0x80) >> 8;
-            left             = Clip16BitSample(left);
-            right            = Clip16BitSample(right);
-            lPrevSampleLeft  = lCurSampleLeft;
-            lCurSampleLeft   = left;
-            lPrevSampleRight = lCurSampleRight;
-            lCurSampleRight  = right;
+            c1left  = EATable[HINIBBLE(bInput)]; // predictor coeffs for left channel
+            c2left  = EATable[HINIBBLE(bInput) + 4];
+            c1right = EATable[LONIBBLE(bInput)]; // predictor coeffs for right channel
+            c2right = EATable[LONIBBLE(bInput) + 4];
+            fread(&bInput, sizeof(int8_t), 1, mus_file);
+            dleft  = HINIBBLE(bInput) + 8; // shift value for left channel
+            dright = LONIBBLE(bInput) + 8; // shift value for right channel
+            for (uint32_t sCount = 0; sCount < dwSubOutSize; sCount++) {
+                fread(&bInput, sizeof(int8_t), 1, mus_file);
+                left             = HINIBBLE(bInput); // HIGHER nibble for left channel
+                right            = LONIBBLE(bInput); // LOWER nibble for right channel
+                left             = (left << 0x1c) >> dleft;
+                right            = (right << 0x1c) >> dright;
+                left             = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
+                right            = (right + lCurSampleRight * c1right + lPrevSampleRight * c2right + 0x80) >> 8;
+                left             = Clip16BitSample(left);
+                right            = Clip16BitSample(right);
+                lPrevSampleLeft  = lCurSampleLeft;
+                lCurSampleLeft   = left;
+                lPrevSampleRight = lCurSampleRight;
+                lCurSampleRight  = right;
 
-            // Now we've got lCurSampleLeft and lCurSampleRight which form one stereo
-            // sample and all is set for the next input byte...
-            outBufL[l++] = (uint16_t) lCurSampleLeft;
-            outBufR[r++] = (uint16_t) lCurSampleRight;
+                outBufL[l++] = (uint16_t) lCurSampleLeft;
+                outBufR[r++] = (uint16_t) lCurSampleRight;
+            }
+        }
+
+        // process the rest (if any)
+        if ((asfChunkHeader->dwOutSize % dwSubOutSize) != 0) {
+            fread(&bInput, sizeof(int8_t), 1, mus_file);
+            c1left  = EATable[HINIBBLE(bInput)]; // predictor coeffs for left channel
+            c2left  = EATable[HINIBBLE(bInput) + 4];
+            c1right = EATable[LONIBBLE(bInput)]; // predictor coeffs for right channel
+            c2right = EATable[LONIBBLE(bInput) + 4];
+            fread(&bInput, sizeof(int8_t), 1, mus_file);
+            dleft  = HINIBBLE(bInput) + 8; // shift value for left channel
+            dright = LONIBBLE(bInput) + 8; // shift value for right channel
+            for (uint32_t sCount = 0; sCount < (asfChunkHeader->dwOutSize % dwSubOutSize); sCount++) {
+                fread(&bInput, sizeof(int8_t), 1, mus_file);
+                left             = HINIBBLE(bInput); // HIGHER nibble for left channel
+                right            = LONIBBLE(bInput); // LOWER nibble for right channel
+                left             = (left << 0x1c) >> dleft;
+                right            = (right << 0x1c) >> dright;
+                left             = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
+                right            = (right + lCurSampleRight * c1right + lPrevSampleRight * c2right + 0x80) >> 8;
+                left             = Clip16BitSample(left);
+                right            = Clip16BitSample(right);
+                lPrevSampleLeft  = lCurSampleLeft;
+                lCurSampleLeft   = left;
+                lPrevSampleRight = lCurSampleRight;
+                lCurSampleRight  = right;
+
+                outBufL[l++] = (uint16_t) lCurSampleLeft;
+                outBufR[r++] = (uint16_t) lCurSampleRight;
+            }
+        }
+    } else if (channels == 1) {
+        uint32_t dwSubOutSize = 0x0E;
+        // process integral number of (dwSubOutSize) samples
+        for (uint32_t bCount = 0; bCount < (asfChunkHeader->dwOutSize / dwSubOutSize); bCount++) {
+            fread(&bInput, sizeof(int8_t), 1, mus_file);
+            c1left = EATable[HINIBBLE(bInput)];   // predictor coeffs
+            c2left = EATable[HINIBBLE(bInput)+4];
+            dleft  = LONIBBLE(bInput)+8;          // shift value
+
+            for (uint32_t sCount = 0; sCount < dwSubOutSize; sCount+=2) {
+                fread(&bInput, sizeof(int8_t), 1, mus_file);
+
+                // First sample (Higher nibble)
+                left = HINIBBLE(bInput);
+                left = (left << 0x1c) >> dleft;
+                left = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
+                left = Clip16BitSample(left);
+                lPrevSampleLeft = lCurSampleLeft;
+                lCurSampleLeft = left;
+                outBufL[l++] = (uint16_t) lCurSampleLeft;
+                outBufR[r++] = (uint16_t) lCurSampleLeft;
+
+                // Second sample (Lower nibble)
+                left = LONIBBLE(bInput);
+                left = (left << 0x1c) >> dleft;
+                left = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
+                left = Clip16BitSample(left);
+                lPrevSampleLeft = lCurSampleLeft;
+                lCurSampleLeft = left;
+                outBufL[l++] = (uint16_t) lCurSampleLeft;
+                outBufR[r++] = (uint16_t) lCurSampleLeft;
+            }
+        }
+
+        if ((asfChunkHeader->dwOutSize % dwSubOutSize) != 0) {
+            fread(&bInput, sizeof(int8_t), 1, mus_file);
+            c1left = EATable[HINIBBLE(bInput)];
+            c2left = EATable[HINIBBLE(bInput)+4];
+            dleft  = LONIBBLE(bInput)+8;
+
+            for (uint32_t sCount = 0; sCount < (asfChunkHeader->dwOutSize % dwSubOutSize); sCount+=2) {
+                fread(&bInput, sizeof(int8_t), 1, mus_file);
+
+                // First sample
+                left = HINIBBLE(bInput);
+                left = (left << 0x1c) >> dleft;
+                left = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
+                left = Clip16BitSample(left);
+                lPrevSampleLeft = lCurSampleLeft;
+                lCurSampleLeft = left;
+                outBufL[l++] = (uint16_t) lCurSampleLeft;
+                outBufR[r++] = (uint16_t) lCurSampleLeft;
+
+                // Second sample
+                if (sCount + 1 < (asfChunkHeader->dwOutSize % dwSubOutSize)) {
+                     left = LONIBBLE(bInput);
+                     left = (left << 0x1c) >> dleft;
+                     left = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
+                     left = Clip16BitSample(left);
+                     lPrevSampleLeft = lCurSampleLeft;
+                     lCurSampleLeft = left;
+                     outBufL[l++] = (uint16_t) lCurSampleLeft;
+                     outBufR[r++] = (uint16_t) lCurSampleLeft;
+                }
+            }
         }
     }
 
-    // process the rest (if any)
-    if ((asfChunkHeader->dwOutSize % dwSubOutSize) != 0) {
-        fread(&bInput, sizeof(int8_t), 1, mus_file);
-        // bInput=audioData[i++];
-        c1left  = EATable[HINIBBLE(bInput)]; // predictor coeffs for left channel
-        c2left  = EATable[HINIBBLE(bInput) + 4];
-        c1right = EATable[LONIBBLE(bInput)]; // predictor coeffs for right channel
-        c2right = EATable[LONIBBLE(bInput) + 4];
-        fread(&bInput, sizeof(int8_t), 1, mus_file);
-        // bInput=audioData[i++];
-        dleft  = HINIBBLE(bInput) + 8; // shift value for left channel
-        dright = LONIBBLE(bInput) + 8; // shift value for right channel
-        for (uint32_t sCount = 0; sCount < (asfChunkHeader->dwOutSize % dwSubOutSize); sCount++) {
-            fread(&bInput, sizeof(int8_t), 1, mus_file);
-            left             = HINIBBLE(bInput); // HIGHER nibble for left channel
-            right            = LONIBBLE(bInput); // LOWER nibble for right channel
-            left             = (left << 0x1c) >> dleft;
-            right            = (right << 0x1c) >> dright;
-            left             = (left + lCurSampleLeft * c1left + lPrevSampleLeft * c2left + 0x80) >> 8;
-            right            = (right + lCurSampleRight * c1right + lPrevSampleRight * c2right + 0x80) >> 8;
-            left             = Clip16BitSample(left);
-            right            = Clip16BitSample(right);
-            lPrevSampleLeft  = lCurSampleLeft;
-            lCurSampleLeft   = left;
-            lPrevSampleRight = lCurSampleRight;
-            lCurSampleRight  = right;
-
-            // Now we've got lCurSampleLeft and lCurSampleRight which form one stereo
-            // sample and all is set for the next input byte...
-            outBufL[l++] = (uint16_t) lCurSampleLeft;
-            outBufR[r++] = (uint16_t) lCurSampleRight;
-        }
-    }
-
-    for (auto t = 0; t < nSamples; ++t) {
+    for (auto t = 0; t < asfChunkHeader->dwOutSize; ++t) {
         write_little_endian(outBufL[t], 2, pcm_file);
         write_little_endian(outBufR[t], 2, pcm_file);
     }
@@ -312,9 +374,29 @@ bool MusicLoader::ReadSCHl(FILE *mus_file, uint32_t sch1Offset, FILE *pcm_file) 
             return false;
         }
 
-        auto asfChunkHeader = (ASFChunkHeader *) calloc(1, sizeof(ASFChunkHeader));
-        fread(asfChunkHeader, sizeof(ASFChunkHeader), 1, mus_file);
-        DecompressEAADPCM(asfChunkHeader, chk->dwSize - sizeof(ASFBlockHeader) - sizeof(ASFChunkHeader), mus_file, pcm_file);
+        ASFChunkHeader *asfChunkHeader;
+        long nSamples = 0;
+
+        if (dwChannels == 1) {
+            auto asfChunkHeaderMono = (ASFChunkHeaderMono *) calloc(1, sizeof(ASFChunkHeaderMono));
+            fread(asfChunkHeaderMono, sizeof(ASFChunkHeaderMono), 1, mus_file);
+
+            // Convert Mono header to Stereo header structure for easier processing or pass it directly
+            asfChunkHeader = (ASFChunkHeader *) calloc(1, sizeof(ASFChunkHeader));
+            asfChunkHeader->dwOutSize = asfChunkHeaderMono->dwOutSize;
+            asfChunkHeader->lCurSampleLeft = asfChunkHeaderMono->lCurSample;
+            asfChunkHeader->lPrevSampleLeft = asfChunkHeaderMono->lPrevSample;
+            // Right channel unused in mono
+
+            nSamples = chk->dwSize - sizeof(ASFBlockHeader) - sizeof(ASFChunkHeaderMono);
+            free(asfChunkHeaderMono);
+        } else {
+            asfChunkHeader = (ASFChunkHeader *) calloc(1, sizeof(ASFChunkHeader));
+            fread(asfChunkHeader, sizeof(ASFChunkHeader), 1, mus_file);
+            nSamples = chk->dwSize - sizeof(ASFBlockHeader) - sizeof(ASFChunkHeader);
+        }
+
+        DecompressEAADPCM(asfChunkHeader, nSamples, mus_file, pcm_file, dwChannels);
         totalSCD1InterleaveSize += chk->dwSize;
 
         free(asfChunkHeader);
@@ -360,18 +442,14 @@ void MusicLoader::ParseMAP(const std::string &map_path, const std::string &mus_p
     // Get starting position of first section
     uint8_t section_Idx = mapHeader->bFirstSection;
 
-    // TODO: Linear playthrough until I work out the looping malarkey
-    for (auto lol = 0; lol < mapHeader->bNumSections; ++lol) {
-        if (!ReadSCHl(mus_file, startingPositions[lol], pcm_file)) { //
-            std::cout << "Error reading SCHl block, POS: " << (int) lol << " Offset: " << startingPositions[lol] << std::endl;
-            break;
-        }
-    }
-
     // Out of spec: TrackModel number of times played section, use to set next section
     auto playedSections = std::map<uint8_t, int8_t>();
+    uint32_t totalSectionsPlayed = 0;
+    // Cap at a reasonable number of sections to prevent filling the disk with infinite PCM data
+    // In a real playback engine, this would be infinite.
+    const uint32_t MAX_SECTIONS_PLAYED = 1000;
 
-    while (sectionDefTable[section_Idx].bNumRecords > 0 && section_Idx < mapHeader->bNumSections) {
+    while (sectionDefTable[section_Idx].bNumRecords > 0 && section_Idx < mapHeader->bNumSections && totalSectionsPlayed < MAX_SECTIONS_PLAYED) {
         // Starting positions are raw offsets into MUS file
         // Read the SCH1 header and further blocks in MUS to play the section
         if (!ReadSCHl(mus_file, startingPositions[section_Idx], pcm_file)) { //
@@ -380,14 +458,21 @@ void MusicLoader::ParseMAP(const std::string &map_path, const std::string &mus_p
         }
 
         // Check if we've already played this section before. If we have, drop record number, else set to highest record index
-        playedSections[section_Idx] = playedSections.count(section_Idx) ? playedSections[section_Idx] - 1 : sectionDefTable[section_Idx].bNumRecords - 1;
-
-        // If played all next records, quit playback? TODO: Implies that TrackModel data must correlate to MAP derived loops
-        if (playedSections[section_Idx] < 0) {
-            break;
+        // Logic: Intro variations are played first (higher indices), then the last one (index 0) is looped.
+        if (playedSections.count(section_Idx)) {
+            if (playedSections[section_Idx] > 0) {
+                playedSections[section_Idx]--;
+            }
+        } else {
+            playedSections[section_Idx] = sectionDefTable[section_Idx].bNumRecords - 1;
         }
 
         section_Idx = sectionDefTable[section_Idx].msdRecords[playedSections[section_Idx]].bNextSection;
+        totalSectionsPlayed++;
+    }
+
+    if (totalSectionsPlayed >= MAX_SECTIONS_PLAYED) {
+        std::cout << "Playback limit reached (" << MAX_SECTIONS_PLAYED << " sections). Stopping infinite loop." << std::endl;
     }
 
     free(startingPositions);

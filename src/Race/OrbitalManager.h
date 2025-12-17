@@ -7,7 +7,7 @@ namespace OpenNFS {
     class OrbitalManager {
     public:
         explicit OrbitalManager();
-        void Update(const BaseCamera &camera, float timeScaleFactor) const;
+        void Update(const BaseCamera &camera, float timeScaleFactor);
         [[nodiscard]] GlobalLight* GetActiveGlobalLight() const;
 
     private:
@@ -15,5 +15,6 @@ namespace OpenNFS {
 
         std::unique_ptr<GlobalLight> m_sun;
         std::unique_ptr<GlobalLight> m_moon;
+        float m_currentAngle{0.f};
     };
 }

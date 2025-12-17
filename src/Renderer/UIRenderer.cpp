@@ -1,10 +1,12 @@
 #include "UIRenderer.h"
 
+#include "../Config.h"
 #include "../UI/UIButton.h"
 #include "../UI/UIImage.h"
 #include "../UI/UITextField.h"
 #include "../Util/ImageLoader.h"
 
+#include <algorithm>
 #include <ft2build.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <json/json.hpp>
@@ -144,11 +146,11 @@ namespace OpenNFS {
     }
 
     void UIRenderer::RenderResource(UIResource const &resource, GLint layer, GLfloat x, GLfloat y, GLfloat scale) {
-        // TODO: Actually implement this rescaling scaling properly
-        float ratioX = 1.0f; // (float) resource.width / Config::get().resX;
-        float ratioY = 1.0f; // (float) resource.height / Config::get().resY;
+        float const ratioX{static_cast<float>(Config::get().resX) / static_cast<float>(DEFAULT_X_RESOLUTION)};
+        float const ratioY{static_cast<float>(Config::get().resY) / static_cast<float>(DEFAULT_Y_RESOLUTION)};
+        float const resolutionScale{std::min(ratioX, ratioY)};
 
-        RenderResource(resource, layer, x, y, ratioX * resource.width, ratioY * resource.height, scale);
+        RenderResource(resource, layer, x, y, resolutionScale * resource.width, resolutionScale * resource.height, scale);
     }
 
     void UIRenderer::RenderResource(
