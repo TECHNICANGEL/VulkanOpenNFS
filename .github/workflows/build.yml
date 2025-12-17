@@ -29,6 +29,35 @@ jobs:
             LICENSE
             README.md
 
+  Release:
+    needs: [Linux, Windows, MacOS]
+    if: ${{ github.ref_type == 'tag' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Zip artifacts
+        run: |
+          mkdir release_assets
+          cd artifacts
+          for dir in OpenNFS-*; do
+            if [ -d "$dir" ]; then
+              zip -r "../release_assets/$dir.zip" "$dir"
+            fi
+          done
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_assets/*.zip
+          prerelease: false
+          name: OpenNFS ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   Windows:
     runs-on: windows-latest
     steps:
@@ -75,24 +104,3 @@ jobs:
             LICENSE
             README.md
 
-  Release:
-    needs: [Linux, Windows, MacOS]
-    if: ${{ github.ref_type == 'tag' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        build: [Linux, Windows, MacOS]
-    steps:
-    - uses: actions/download-artifact@v4
-    - name: Zip artifacts
-      run: |
-        zip -r OpenNFS-${{matrix.build}}.zip OpenNFS-${{matrix.build}}
-    - name: Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: OpenNFS-${{matrix.build}}.zip
-        prerelease: true
-        name: OpenNFS ${{ github.ref_name }}
-        tag_name: ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
