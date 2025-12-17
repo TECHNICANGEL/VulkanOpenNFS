@@ -11,3 +11,4 @@ CMakeFiles/
 # Gradle
 .gradle/
 **/build/
+local.properties
