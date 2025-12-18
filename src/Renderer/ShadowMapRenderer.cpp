@@ -17,8 +17,14 @@ namespace OpenNFS {
         // Attach depth texture as FBO's depth buffer
         glBindFramebuffer(GL_FRAMEBUFFER, m_fboDepthMap);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTextureID, 0);
+#ifndef __ANDROID__
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
+#else
+        GLenum none = GL_NONE;
+        glDrawBuffers(1, &none);
+        glReadBuffer(GL_NONE);
+#endif
 
         // Always check that our framebuffer is ok
         CHECK_F(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE, "Depth FBO is nae good");
