@@ -34,9 +34,12 @@ set(IMGUI_SOURCES
         include/imgui/imgui_draw.cpp
         include/imgui/imgui_tables.cpp
         include/imgui/imgui_widgets.cpp
-        include/imgui/backends/imgui_impl_glfw.cpp
         include/imgui/backends/imgui_impl_opengl3.cpp
         #[[include/ImGuiColorTextEdit/TextEditor.cpp]])
+
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    list(APPEND IMGUI_SOURCES include/imgui/backends/imgui_impl_glfw.cpp)
+endif()
 add_definitions(-DIMGUI_USER_CONFIG="${PROJECT_SOURCE_DIR}/src/Renderer/imgui_config.h")
 
 set(SOURCE_FILES
@@ -148,7 +151,7 @@ include_directories(lib/bullet3/src)
 list(APPEND ONFS_LIBRARIES BulletDynamics BulletCollision LinearMath Bullet3Common)
 
 #[[GLEW Configuration]]
-if (NOT ANDROID)
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
     add_subdirectory(lib/glew-cmake)
     list(APPEND ONFS_LIBRARIES libglew_static)
     list(APPEND SOURCE_FILES lib/glew-cmake/src/glew.c)
@@ -159,13 +162,13 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
-if (NOT ANDROID)
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
     add_subdirectory(lib/glfw)
     list(APPEND ONFS_LIBRARIES glfw)
 endif()
 
 #[[OpenGL Configuration]]
-if (NOT ANDROID)
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
     find_package(OpenGL REQUIRED)
     include_directories(${OPENGL_INCLUDE_DIRS})
     list(APPEND ONFS_LIBRARIES ${OPENGL_LIBRARIES})
@@ -185,7 +188,7 @@ if (${USE_VULKAN})
     add_definitions(-DVULKAN_BUILD)
 endif ()
 
-if (ANDROID)
+if (CMAKE_SYSTEM_NAME MATCHES "Android")
     add_library(android_native_app_glue STATIC ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
     add_library(OpenNFS SHARED ${SOURCE_FILES})
     target_include_directories(OpenNFS PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
@@ -212,6 +215,6 @@ foreach (_test_file ${TEST_SRC_FILES})
 endforeach ()
 
 #[[Link Up Ting]]
-if (NOT ANDROID)
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
     target_link_libraries(OpenNFS ${ONFS_LIBRARIES})
 endif()
