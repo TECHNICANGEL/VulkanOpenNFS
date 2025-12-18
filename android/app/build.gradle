@@ -36,6 +36,31 @@ android {
             version "3.22.1"
         }
     }
+
+    preBuild.doFirst {
+        println "Patching lib/g3log/Build.cmake for Android..."
+        def g3logBuildFile = file("${project.rootDir}/../../lib/g3log/Build.cmake")
+        if (g3logBuildFile.exists()) {
+            def content = g3logBuildFile.text
+            // Patch the condition to include ANDROID
+            def patchedContent = content.replace(
+                'IF(NOT(MSVC OR MINGW))',
+                'IF(NOT(MSVC OR MINGW OR ANDROID))'
+            )
+            // Also handle the case if it was already patched or different format
+            // Try a more robust regex replacement if simple replace fails or for safety
+            if (content.contains('IF(NOT(MSVC OR MINGW))')) {
+                 g3logBuildFile.text = patchedContent
+                 println "Patched lib/g3log/Build.cmake successfully."
+            } else if (content.contains('IF(NOT(MSVC OR MINGW OR ANDROID))')) {
+                 println "lib/g3log/Build.cmake already patched."
+            } else {
+                 println "WARNING: Could not find target string in lib/g3log/Build.cmake to patch."
+            }
+        } else {
+            println "WARNING: lib/g3log/Build.cmake not found at ${g3logBuildFile}"
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8

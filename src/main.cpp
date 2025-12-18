@@ -1,6 +1,8 @@
 #ifdef VULKAN_BUILD
+#ifndef __ANDROID__
 #define GLFW_INCLUDE_VULKAN
 #include "Renderer/vkRenderer.h"
+#endif
 #endif
 
 #include <LibOpenNFS.h>
@@ -31,19 +33,24 @@ class OpenNFSEngine {
 
         if (Config::get().vulkanRender) {
 #ifdef VULKAN_BUILD
+#ifndef __ANDROID__
             vkRenderer renderer;
             renderer.run();
+#endif
 #else
             CHECK_F(false, "This build of OpenNFS was not compiled with Vulkan support!");
 #endif
         } else {
+#ifndef __ANDROID__
             run();
+#endif
         }
     }
 
     void run() {
         LOG(INFO) << "OpenNFS Version " << ONFS_VERSION;
 
+#ifndef __ANDROID__
         // Must initialise OpenGL here as the Loaders instantiate meshes which create VAO's
         std::shared_ptr<GLFWwindow> const window{
             Renderer::InitOpenGL(Config::get().resX, Config::get().resY, "OpenNFS v" + ONFS_VERSION)};
@@ -65,6 +72,7 @@ class OpenNFSEngine {
 
         // Close OpenGL window and terminate GLFW
         glfwTerminate();
+#endif
     }
 
   private:

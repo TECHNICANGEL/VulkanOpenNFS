@@ -1,9 +1,15 @@
 #include "Renderer.h"
 
+#ifndef __ANDROID__
 #include <backends/imgui_impl_opengl3.h>
+#endif
 
 namespace OpenNFS {
+#ifndef __ANDROID__
     Renderer::Renderer(std::shared_ptr<GLFWwindow> const &window,
+#else
+    Renderer::Renderer(std::shared_ptr<void> const &window,
+#endif
                        std::shared_ptr<Logger> const &onfsLogger,
                        std::vector<NfsAssetList> const &installedNFS,
                        Track const &currentTrack,
@@ -13,6 +19,7 @@ namespace OpenNFS {
         LOG(DEBUG) << "Renderer Initialised";
     }
 
+#ifndef __ANDROID__
     std::shared_ptr<GLFWwindow> Renderer::InitOpenGL(uint32_t const resolutionX,
                                                      uint32_t const resolutionY,
                                                      std::string const &windowName) {
@@ -69,6 +76,7 @@ namespace OpenNFS {
 
         return window;
     }
+#endif
 
     bool Renderer::Render(float const totalTime,
                           BaseCamera const &activeCamera,
@@ -211,11 +219,13 @@ namespace OpenNFS {
     }
 
     void Renderer::_InitialiseIMGUI() const {
+#ifndef __ANDROID__
         ImGui::CreateContext();
         ImGui_ImplGlfw_InitForOpenGL(m_window.get(), true);
         std::string const glVersion = "#version " + ONFS_GL_VERSION;
         ImGui_ImplOpenGL3_Init(glVersion.c_str());
         ImGui::StyleColorsDark();
+#endif
     }
 
     void Renderer::_DrawMetadata(Entity const *targetEntity) {
