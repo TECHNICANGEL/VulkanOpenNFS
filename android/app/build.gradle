@@ -39,7 +39,7 @@ android {
 
     preBuild.doFirst {
         println "Patching lib/g3log/Build.cmake for Android..."
-        def g3logBuildFile = file("${project.rootDir}/../../lib/g3log/Build.cmake")
+        def g3logBuildFile = file("${project.rootDir}/../lib/g3log/Build.cmake")
         if (g3logBuildFile.exists()) {
             def content = g3logBuildFile.text
             // Patch the condition to include ANDROID
