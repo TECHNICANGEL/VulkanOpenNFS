@@ -33,7 +33,11 @@ namespace OpenNFS {
             bool mouseRight{};
         };
 
+#ifndef __ANDROID__
         explicit InputManager(std::shared_ptr<GLFWwindow> const &window);
+#else
+        explicit InputManager(std::shared_ptr<void> const &window);
+#endif
         void Scan();
         void ResetCursorPosition() const;
         [[nodiscard]] WindowStatus GetWindowStatus() const;
@@ -42,7 +46,11 @@ namespace OpenNFS {
 
 
       private:
+#ifndef __ANDROID__
         std::shared_ptr<GLFWwindow> m_window;
+#else
+        std::shared_ptr<void> m_window;
+#endif
         WindowStatus m_windowStatus {GAME};
     };
 } // namespace OpenNFS
