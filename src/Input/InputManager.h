@@ -1,7 +1,11 @@
 #pragma once
 
+#ifndef __ANDROID__
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#else
+#include <GLES3/gl3.h>
+#endif
 #include <memory>
 
 namespace OpenNFS {
