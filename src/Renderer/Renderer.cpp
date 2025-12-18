@@ -141,7 +141,9 @@ namespace OpenNFS {
         // Render the Debug UI
         this->_DrawDebugUI(userParams, activeCamera);
 
+#ifndef __ANDROID__
         glfwSwapBuffers(m_window.get());
+#endif
 
         return newAssetSelected;
     }
@@ -151,9 +153,11 @@ namespace OpenNFS {
     }
     void Renderer::NewFrame() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#ifndef __ANDROID__
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+#endif
     }
 
     VisibleSet Renderer::_FrustumCull(Track const &track,
@@ -311,10 +315,12 @@ namespace OpenNFS {
 
         // Rendering
         int display_w, display_h;
+#ifndef __ANDROID__
         glfwGetFramebufferSize(m_window.get(), &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#endif
     }
 
     bool Renderer::_DrawMenuBar(AssetData &loadedAssets) const {
@@ -356,8 +362,10 @@ namespace OpenNFS {
     }
 
     Renderer::~Renderer() {
+#ifndef __ANDROID__
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
+#endif
     }
 } // namespace OpenNFS

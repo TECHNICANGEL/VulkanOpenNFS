@@ -116,6 +116,7 @@ include_directories(include/imgui)
 
 #[[JSON/STB/IMGUI/TINYOBJLOADER/BMPREAD/ARGPARSE/MAGIC_ENUM]]
 include_directories(include)
+include_directories(src)
 
 #[[FREETYPE]]
 set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "Disable HarfBuzz (used for improving auto-hinting of OpenType fonts).")
