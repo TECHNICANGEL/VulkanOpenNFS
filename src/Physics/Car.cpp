@@ -215,8 +215,13 @@ namespace OpenNFS {
 
         if (assetData.tag == NFSVersion::NFS_3 || assetData.tag == NFSVersion::NFS_4) {
             carTexturePath << "/car00.tga";
+#ifndef __ANDROID__
             renderInfo.textureID =
                 ImageLoader::LoadImage(carTexturePath.str(), &width, &height, GL_CLAMP_TO_BORDER, GL_LINEAR_MIPMAP_LINEAR);
+#else
+            renderInfo.textureID =
+                ImageLoader::LoadImage(carTexturePath.str(), &width, &height, GL_CLAMP_TO_EDGE, GL_LINEAR_MIPMAP_LINEAR);
+#endif
         } else if (assetData.tag == NFSVersion::MCO) {
             std::stringstream car_alpha_texture_path;
             carTexturePath << "/Textures/0000.BMP";
@@ -226,8 +231,13 @@ namespace OpenNFS {
                                               &height)) {
                 glGenTextures(1, &renderInfo.textureID);
                 glBindTexture(GL_TEXTURE_2D, renderInfo.textureID);
+#ifndef __ANDROID__
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+#else
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#endif
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
