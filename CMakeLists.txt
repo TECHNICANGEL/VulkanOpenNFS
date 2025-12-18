@@ -199,21 +199,23 @@ else()
 endif()
 
 #[[Google Test Framework Configuration]]
-set(gtest_force_shared_crt ON CACHE BOOL "Prevent overriding the parent project's compiler/linker setting")
-add_subdirectory(lib/googletest)
-enable_testing()
-include_directories(lib/googletest/googletest/include)
-# Add test cpp files
-file(GLOB TEST_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
-list(REMOVE_ITEM SOURCE_FILES "src/main.cpp")
-# From list of files we'll create tests test_name.cpp -> test_name
-foreach (_test_file ${TEST_SRC_FILES})
-    get_filename_component(_test_name ${_test_file} NAME_WE)
-    add_executable(${_test_name} ${_test_file} ${SOURCE_FILES})
-    target_link_libraries(${_test_name} gtest gtest_main ${ONFS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-    add_test(${_test_name} ${_test_name})
-    set_tests_properties(${_test_name} PROPERTIES TIMEOUT 10)
-endforeach ()
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    set(gtest_force_shared_crt ON CACHE BOOL "Prevent overriding the parent project's compiler/linker setting")
+    add_subdirectory(lib/googletest)
+    enable_testing()
+    include_directories(lib/googletest/googletest/include)
+    # Add test cpp files
+    file(GLOB TEST_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
+    list(REMOVE_ITEM SOURCE_FILES "src/main.cpp")
+    # From list of files we'll create tests test_name.cpp -> test_name
+    foreach (_test_file ${TEST_SRC_FILES})
+        get_filename_component(_test_name ${_test_file} NAME_WE)
+        add_executable(${_test_name} ${_test_file} ${SOURCE_FILES})
+        target_link_libraries(${_test_name} gtest gtest_main ${ONFS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+        add_test(${_test_name} ${_test_name})
+        set_tests_properties(${_test_name} PROPERTIES TIMEOUT 10)
+    endforeach ()
+endif()
 
 #[[Link Up Ting]]
 if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
