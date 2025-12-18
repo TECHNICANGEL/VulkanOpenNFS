@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef __ANDROID__
 #include <backends/imgui_impl_glfw.h>
+#endif
 #include <optional>
 
 #include "../Camera/HermiteCamera.h"
@@ -27,13 +29,18 @@ namespace OpenNFS {
 
     class Renderer {
       public:
+#ifndef __ANDROID__
         Renderer(std::shared_ptr<GLFWwindow> const &window,
+#else
+        Renderer(std::shared_ptr<void> const &window,
+#endif
                  std::shared_ptr<Logger> const &onfsLogger,
                  std::vector<NfsAssetList> const &installedNFS,
                  Track const &currentTrack,
                  std::shared_ptr<BulletDebugDrawer> const &debugDrawer);
         ~Renderer();
 
+#ifndef __ANDROID__
         static void GlfwError(int id, char const *description) {
             LOG(WARNING) << description;
         }
@@ -44,6 +51,9 @@ namespace OpenNFS {
         }
 
         static std::shared_ptr<GLFWwindow> InitOpenGL(uint32_t resolutionX, uint32_t resolutionY, std::string const &windowName);
+#else
+        static std::shared_ptr<void> InitOpenGL(uint32_t resolutionX, uint32_t resolutionY, std::string const &windowName) { return nullptr; }
+#endif
         static void _DrawMetadata(Entity const *targetEntity);
         bool Render(float totalTime,
                     BaseCamera const &activeCamera,
@@ -66,7 +76,11 @@ namespace OpenNFS {
                                        GlobalLight const *globalLight,
                                        ParamData const &userParams);
 
+#ifndef __ANDROID__
         std::shared_ptr<GLFWwindow> m_window;
+#else
+        std::shared_ptr<void> m_window;
+#endif
         std::shared_ptr<Logger> m_logger;
         std::vector<NfsAssetList> m_nfsAssetList;
         Track const &m_track;

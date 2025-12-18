@@ -3,10 +3,16 @@
 #include "../Config.h"
 
 namespace OpenNFS {
+#ifndef __ANDROID__
     InputManager::InputManager(std::shared_ptr<GLFWwindow> const &window) : m_window(window) {
     }
+#else
+    InputManager::InputManager(std::shared_ptr<void> const &window) : m_window(window) {
+    }
+#endif
 
     void InputManager::Scan() {
+#ifndef __ANDROID__
         glfwPollEvents();
         inputs.accelerate = glfwGetKey(m_window.get(), GLFW_KEY_W) == GLFW_PRESS;
         inputs.reverse = glfwGetKey(m_window.get(), GLFW_KEY_S) == GLFW_PRESS;
@@ -32,10 +38,13 @@ namespace OpenNFS {
             m_windowStatus = UI;
             ImGui::GetIO().MouseDrawCursor = true;
         }
+#endif
     }
 
     void InputManager::ResetCursorPosition() const {
+#ifndef __ANDROID__
         glfwSetCursorPos(m_window.get(), Config::get().windowSizeX / 2, Config::get().windowSizeY / 2);
+#endif
     }
 
     WindowStatus InputManager::GetWindowStatus() const {

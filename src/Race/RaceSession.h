@@ -1,7 +1,11 @@
 #pragma once
 
+#ifndef __ANDROID__
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#else
+#include <GLES3/gl3.h>
+#endif
 
 #include "Agents/PlayerAgent.h"
 #include "../Camera/CarCamera.h"
@@ -19,7 +23,11 @@
 namespace OpenNFS {
     class RaceSession {
     public:
+#ifndef __ANDROID__
         RaceSession(const std::shared_ptr<GLFWwindow> &window,
+#else
+        RaceSession(const std::shared_ptr<void> &window,
+#endif
                     const std::shared_ptr<Logger> &onfsLogger,
                     const std::vector<NfsAssetList> &installedNFS,
                     const Track &currentTrack,
@@ -34,7 +42,11 @@ namespace OpenNFS {
         CameraMode m_activeCameraMode {CameraMode::FREE_LOOK};
         std::optional<Entity *> m_targetedEntity;
 
+#ifndef __ANDROID__
         std::shared_ptr<GLFWwindow> m_window;
+#else
+        std::shared_ptr<void> m_window;
+#endif
         const Track &m_track;
         std::shared_ptr<PlayerAgent> m_playerAgent;
         FreeCamera m_freeCamera;

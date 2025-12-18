@@ -1,7 +1,11 @@
 #include "RaceSession.h"
 
 namespace OpenNFS {
+#ifndef __ANDROID__
     RaceSession::RaceSession(std::shared_ptr<GLFWwindow> const &window,
+#else
+    RaceSession::RaceSession(std::shared_ptr<void> const &window,
+#endif
                              std::shared_ptr<Logger> const &onfsLogger,
                              std::vector<NfsAssetList> const &installedNFS,
                              Track const &currentTrack,
@@ -51,11 +55,17 @@ namespace OpenNFS {
     }
 
     AssetData RaceSession::Simulate() {
+#ifndef __ANDROID__
         while (!glfwWindowShouldClose(m_window.get())) {
             // glfwGetTime is called only once, the first time this function is called
             static double lastTime = glfwGetTime();
             // Compute time difference between current and last frame
             double const currentTime{glfwGetTime()};
+#else
+        while (true) {
+            static double lastTime = 0;
+            double const currentTime = 0;
+#endif
             // Update time between engine ticks
             auto const deltaTime{static_cast<float>(currentTime - lastTime)}; // Keep track of time between engine ticks
 

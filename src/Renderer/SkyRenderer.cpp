@@ -17,6 +17,7 @@ namespace OpenNFS {
         std::string tint_texture_path("../resources/misc/skydome/tint.tga");
         std::string tint2_texture_path("../resources/misc/skydome/tint2.tga");
         int width, height;
+#ifndef __ANDROID__
         clouds1TextureID = ImageLoader::LoadImage(clouds1_texture_path, &width, &height, GL_CLAMP_TO_BORDER,
                                                   GL_LINEAR_MIPMAP_LINEAR);
         clouds2TextureID = ImageLoader::LoadImage(clouds2_texture_path, &width, &height, GL_CLAMP_TO_BORDER,
@@ -29,6 +30,20 @@ namespace OpenNFS {
                                                GL_LINEAR_MIPMAP_LINEAR);
         tint2TextureID = ImageLoader::LoadImage(tint2_texture_path, &width, &height, GL_CLAMP_TO_BORDER,
                                                 GL_LINEAR_MIPMAP_LINEAR);
+#else
+        clouds1TextureID = ImageLoader::LoadImage(clouds1_texture_path, &width, &height, GL_CLAMP_TO_EDGE,
+                                                  GL_LINEAR_MIPMAP_LINEAR);
+        clouds2TextureID = ImageLoader::LoadImage(clouds2_texture_path, &width, &height, GL_CLAMP_TO_EDGE,
+                                                  GL_LINEAR_MIPMAP_LINEAR);
+        sunTextureID = ImageLoader::LoadImage(sun_texture_path, &width, &height, GL_CLAMP_TO_EDGE,
+                                              GL_LINEAR_MIPMAP_LINEAR);
+        moonTextureID = ImageLoader::LoadImage(moon_texture_path, &width, &height, GL_CLAMP_TO_EDGE,
+                                               GL_LINEAR_MIPMAP_LINEAR);
+        tintTextureID = ImageLoader::LoadImage(tint_texture_path, &width, &height, GL_CLAMP_TO_EDGE,
+                                               GL_LINEAR_MIPMAP_LINEAR);
+        tint2TextureID = ImageLoader::LoadImage(tint2_texture_path, &width, &height, GL_CLAMP_TO_EDGE,
+                                                GL_LINEAR_MIPMAP_LINEAR);
+#endif
 
         // Load OBJ Model
         std::vector<ModelData> models;

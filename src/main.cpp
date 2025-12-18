@@ -1,6 +1,8 @@
 #ifdef VULKAN_BUILD
+#ifndef __ANDROID__
 #define GLFW_INCLUDE_VULKAN
 #include "Renderer/vkRenderer.h"
+#endif
 #endif
 
 #include <LibOpenNFS.h>
@@ -31,19 +33,24 @@ class OpenNFSEngine {
 
         if (Config::get().vulkanRender) {
 #ifdef VULKAN_BUILD
+#ifndef __ANDROID__
             vkRenderer renderer;
             renderer.run();
+#endif
 #else
             CHECK_F(false, "This build of OpenNFS was not compiled with Vulkan support!");
 #endif
         } else {
+#ifndef __ANDROID__
             run();
+#endif
         }
     }
 
     void run() {
         LOG(INFO) << "OpenNFS Version " << ONFS_VERSION;
 
+#ifndef __ANDROID__
         // Must initialise OpenGL here as the Loaders instantiate meshes which create VAO's
         std::shared_ptr<GLFWwindow> const window{
             Renderer::InitOpenGL(Config::get().resX, Config::get().resY, "OpenNFS v" + ONFS_VERSION)};
@@ -65,6 +72,7 @@ class OpenNFSEngine {
 
         // Close OpenGL window and terminate GLFW
         glfwTerminate();
+#endif
     }
 
   private:
@@ -81,10 +89,28 @@ class OpenNFSEngine {
     }
 };
 
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+void android_main(struct android_app* app) {
+    // Init the logger first, as used everywhere in ONFS
+    auto const logger {std::make_shared<Logger>()};
+
+    // Poll for events until the window is ready
+    int events;
+    struct android_poll_source* source;
+    while (app->destroyRequested == 0) {
+        if (ALooper_pollAll(0, nullptr, &events, (void**)&source) >= 0) {
+            if (source != nullptr) source->process(app, source);
+        }
+        // Once window is initialized, we can break or start the engine
+        if (app->window != nullptr) break;
+    }
+#else
 int main(int argc, char **argv) {
     // Init the logger first, as used everywhere in ONFS
     auto const logger {std::make_shared<Logger>()};
     Config::get().InitFromCommandLine(argc, argv);
+#endif
 
     // Pass through our g3log streams as callbacks to LibOpenNFS. This looks strange, but we define a lambda that
     // returns a std::function (the callback itself) to avoid duplicating broadly identical declarations for each log
@@ -104,8 +130,16 @@ int main(int argc, char **argv) {
         OpenNFSEngine game(logger);
     } catch (std::runtime_error const &e) {
         LOG(WARNING) << e.what();
+#ifdef __ANDROID__
+        return;
+#else
         return EXIT_FAILURE;
+#endif
     }
 
+#ifdef __ANDROID__
+    // return; // void
+#else
     return EXIT_SUCCESS;
+#endif
 }

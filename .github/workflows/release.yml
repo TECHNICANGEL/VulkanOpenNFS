@@ -1,0 +1,50 @@
+name: Nightly Release
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+
+      - name: Create Release Archives
+        run: |
+          mkdir release_assets
+          cd artifacts
+          for dir in OpenNFS-*; do
+            if [ -d "$dir" ]; then
+              if [[ "$dir" == "OpenNFS-Android" ]]; then
+                 cp "$dir/app-debug.apk" "../release_assets/OpenNFS-Android.apk"
+              else
+                 zip -r "../release_assets/$dir.zip" "$dir"
+              fi
+            fi
+          done
+
+      - name: Nightly Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release_assets/*.zip
+            release_assets/*.apk
+          tag_name: nightly
+          name: OpenNFS Nightly
+          draft: false
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

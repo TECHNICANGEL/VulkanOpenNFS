@@ -1,6 +1,5 @@
 #include "UIManager.h"
 
-#include <ranges>
 #include <json/json.hpp>
 
 #include "UIButton.h"

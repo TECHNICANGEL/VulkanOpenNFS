@@ -357,7 +357,7 @@ namespace OpenNFS::Utils {
                 // Convert the filename to lowercase using transform() function and ::tolower in STL, then add it back to path for full, relative path
                 path originalPath = iter->path();
                 std::string lowerNfsFileName = originalPath.filename().string();
-                std::ranges::transform(lowerNfsFileName, lowerNfsFileName.begin(), ::tolower);
+                std::transform(lowerNfsFileName.begin(), lowerNfsFileName.end(), lowerNfsFileName.begin(), ::tolower);
                 path lowerNfsFilePath(originalPath.parent_path().string() + "/" + lowerNfsFileName);
 
                 // Store the original path and lowercase path for later rename
@@ -368,8 +368,8 @@ namespace OpenNFS::Utils {
             }
         }
         // Sort the paths by depth, deepest first, so the file references remain valid at base as we traverse and rename
-        std::ranges::sort(originalPaths, FilePathSortByDepthReverse);
-        std::ranges::sort(lowercasePaths, FilePathSortByDepthReverse);
+        std::sort(originalPaths.begin(), originalPaths.end(), FilePathSortByDepthReverse);
+        std::sort(lowercasePaths.begin(), lowercasePaths.end(), FilePathSortByDepthReverse);
 
         // Perform the renaming
         for (uint32_t uNfsFileIdx = 0; uNfsFileIdx < originalPaths.size(); ++uNfsFileIdx) {

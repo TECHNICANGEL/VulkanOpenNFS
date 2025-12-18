@@ -96,8 +96,9 @@ GLuint* ShaderSet::AddProgram(const std::vector<std::pair<std::string, GLenum>>&
     }
 
     // ensure the programs have a canonical order
-    std::ranges::sort(shaderNameTypes);
-    shaderNameTypes.erase(std::ranges::unique(shaderNameTypes).begin(), end(shaderNameTypes));
+    std::sort(shaderNameTypes.begin(), shaderNameTypes.end(),
+              [](const ShaderNameTypePair* a, const ShaderNameTypePair* b) { return *a < *b; });
+    shaderNameTypes.erase(std::unique(shaderNameTypes.begin(), shaderNameTypes.end()), shaderNameTypes.end());
 
     // find the program associated to these shaders (or create it if missing)
     const auto foundProgram = mPrograms.emplace(shaderNameTypes, Program{}).first;
@@ -140,6 +141,7 @@ void ShaderSet::UpdatePrograms() {
         case GL_FRAGMENT_SHADER:
             defines += "#define FRAGMENT_SHADER\n";
             break;
+#ifndef __ANDROID__
         case GL_GEOMETRY_SHADER:
             defines += "#define GEOMETRY_SHADER\n";
             break;
@@ -152,6 +154,7 @@ void ShaderSet::UpdatePrograms() {
         case GL_COMPUTE_SHADER:
             defines += "#define COMPUTE_SHADER\n";
             break;
+#endif
         }
 
         std::string preamble_hash = std::to_string((int32_t) std::hash<std::string>()("preamble") & 0x7FFF);
@@ -281,6 +284,7 @@ GLuint* ShaderSet::AddProgramFromExts(const std::vector<std::string>& shaders) {
             shaderType = GL_VERTEX_SHADER;
         else if (ext == "frag")
             shaderType = GL_FRAGMENT_SHADER;
+#ifndef __ANDROID__
         else if (ext == "geom")
             shaderType = GL_GEOMETRY_SHADER;
         else if (ext == "tesc")
@@ -289,6 +293,7 @@ GLuint* ShaderSet::AddProgramFromExts(const std::vector<std::string>& shaders) {
             shaderType = GL_TESS_EVALUATION_SHADER;
         else if (ext == "comp")
             shaderType = GL_COMPUTE_SHADER;
+#endif
         else
             return nullptr;
 

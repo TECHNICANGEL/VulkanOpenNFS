@@ -34,15 +34,17 @@ set(IMGUI_SOURCES
         include/imgui/imgui_draw.cpp
         include/imgui/imgui_tables.cpp
         include/imgui/imgui_widgets.cpp
-        include/imgui/backends/imgui_impl_glfw.cpp
         include/imgui/backends/imgui_impl_opengl3.cpp
         #[[include/ImGuiColorTextEdit/TextEditor.cpp]])
+
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    list(APPEND IMGUI_SOURCES include/imgui/backends/imgui_impl_glfw.cpp)
+endif()
 add_definitions(-DIMGUI_USER_CONFIG="${PROJECT_SOURCE_DIR}/src/Renderer/imgui_config.h")
 
 set(SOURCE_FILES
         ${IMGUI_SOURCES}
         include/bmpread/bmpread.c
-        lib/glew-cmake/src/glew.c
         resources/asset/icon.rc
         src/Camera/BaseCamera.cpp
         src/Camera/BaseCamera.cpp
@@ -109,13 +111,12 @@ set(SOURCE_FILES
         src/UI/UIManager.cpp
         src/UI/UIResource.cpp)
 
-add_executable(OpenNFS ${SOURCE_FILES})
-
 #[[IMGUI]]
 include_directories(include/imgui)
 
 #[[JSON/STB/IMGUI/TINYOBJLOADER/BMPREAD/ARGPARSE/MAGIC_ENUM]]
 include_directories(include)
+include_directories(src)
 
 #[[FREETYPE]]
 set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "Disable HarfBuzz (used for improving auto-hinting of OpenType fonts).")
@@ -151,21 +152,30 @@ include_directories(lib/bullet3/src)
 list(APPEND ONFS_LIBRARIES BulletDynamics BulletCollision LinearMath Bullet3Common)
 
 #[[GLEW Configuration]]
-add_subdirectory(lib/glew-cmake)
-list(APPEND ONFS_LIBRARIES libglew_static)
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    add_subdirectory(lib/glew-cmake)
+    list(APPEND ONFS_LIBRARIES libglew_static)
+    list(APPEND SOURCE_FILES lib/glew-cmake/src/glew.c)
+endif ()
 
 #[[GLFW Configuration]]
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
-add_subdirectory(lib/glfw)
-list(APPEND ONFS_LIBRARIES glfw)
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    add_subdirectory(lib/glfw)
+    list(APPEND ONFS_LIBRARIES glfw)
+endif()
 
 #[[OpenGL Configuration]]
-find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIRS})
-list(APPEND ONFS_LIBRARIES ${OPENGL_LIBRARIES})
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    find_package(OpenGL REQUIRED)
+    include_directories(${OPENGL_INCLUDE_DIRS})
+    list(APPEND ONFS_LIBRARIES ${OPENGL_LIBRARIES})
+else ()
+    list(APPEND ONFS_LIBRARIES android EGL GLESv3 log)
+endif ()
 
 #[[Vulkan Configuration]]
 if (${USE_VULKAN})
@@ -179,22 +189,35 @@ if (${USE_VULKAN})
     add_definitions(-DVULKAN_BUILD)
 endif ()
 
+if (CMAKE_SYSTEM_NAME MATCHES "Android")
+    add_library(android_native_app_glue STATIC ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+    add_library(OpenNFS SHARED ${SOURCE_FILES})
+    target_include_directories(OpenNFS PRIVATE ${ANDROID_NDK}/sources/android/native_app_glue)
+    target_link_libraries(OpenNFS ${ONFS_LIBRARIES} android_native_app_glue)
+else()
+    add_executable(OpenNFS ${SOURCE_FILES})
+endif()
+
 #[[Google Test Framework Configuration]]
-set(gtest_force_shared_crt ON CACHE BOOL "Prevent overriding the parent project's compiler/linker setting")
-add_subdirectory(lib/googletest)
-enable_testing()
-include_directories(lib/googletest/googletest/include)
-# Add test cpp files
-file(GLOB TEST_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
-list(REMOVE_ITEM SOURCE_FILES "src/main.cpp")
-# From list of files we'll create tests test_name.cpp -> test_name
-foreach (_test_file ${TEST_SRC_FILES})
-    get_filename_component(_test_name ${_test_file} NAME_WE)
-    add_executable(${_test_name} ${_test_file} ${SOURCE_FILES})
-    target_link_libraries(${_test_name} gtest gtest_main ${ONFS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-    add_test(${_test_name} ${_test_name})
-    set_tests_properties(${_test_name} PROPERTIES TIMEOUT 10)
-endforeach ()
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    set(gtest_force_shared_crt ON CACHE BOOL "Prevent overriding the parent project's compiler/linker setting")
+    add_subdirectory(lib/googletest)
+    enable_testing()
+    include_directories(lib/googletest/googletest/include)
+    # Add test cpp files
+    file(GLOB TEST_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
+    list(REMOVE_ITEM SOURCE_FILES "src/main.cpp")
+    # From list of files we'll create tests test_name.cpp -> test_name
+    foreach (_test_file ${TEST_SRC_FILES})
+        get_filename_component(_test_name ${_test_file} NAME_WE)
+        add_executable(${_test_name} ${_test_file} ${SOURCE_FILES})
+        target_link_libraries(${_test_name} gtest gtest_main ${ONFS_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+        add_test(${_test_name} ${_test_name})
+        set_tests_properties(${_test_name} PROPERTIES TIMEOUT 10)
+    endforeach ()
+endif()
 
 #[[Link Up Ting]]
-target_link_libraries(OpenNFS ${ONFS_LIBRARIES})
+if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
+    target_link_libraries(OpenNFS ${ONFS_LIBRARIES})
+endif()
